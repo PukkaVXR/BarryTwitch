@@ -1,0 +1,33 @@
+
+/* Risk assets hookup */
+body.theme-risk {
+  --panel: rgba(20, 9, 9, 0.45);
+  --accent: #e94a36;
+  --accent-2: #ffd166;
+  --text: #f2e6d9;
+  --name: #ffd166;
+  background:
+    url('assets/map_texture.jpg') center/cover no-repeat,
+    radial-gradient(circle at 20% 0%, rgba(233,74,54,0.18), transparent 60%),
+    radial-gradient(circle at 85% 100%, rgba(255,209,102,0.12), transparent 60%);
+}
+.msg { background-image: url('assets/paper_texture.png'); background-size: cover; }
+
+/* header logo */
+.header .logo-img { height: 32px; filter: drop-shadow(0 0 4px rgba(0,0,0,.7)); }
+
+/* badge icons */
+.badge.broadcaster { background: url('assets/globe.png') center/contain no-repeat; }
+.badge.mod         { background: url('assets/shield.png') center/contain no-repeat; }
+.badge.vip         { background: url('assets/crown.png') center/contain no-repeat; }
+.badge.sub         { background: url('assets/star.png') center/contain no-repeat; }
+
+/* message marker flag */
+.msg::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  background: url('assets/flag_icon.png') center/contain no-repeat;
+  flex: 0 0 auto;
+}
