@@ -3,27 +3,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Barry Risk – Twitch Chat Overlay</title>
+  <title>Barry Risk – Twitch Chat Overlay · Risk Theme</title>
   <!--
-    HOW TO USE IN OBS
-    1) Save this file as something like: C:\Users\pukka\Downloads\barry_risk_chat_overlay.html
-    2) In OBS: Sources → + → Browser → Create new → check "Local file" → Browse to the file above.
-    3) Set Width/Height to match your canvas (e.g. 800×1000 for a vertical chat or 1200×400 for a bar).
-    4) Right‑click the source → Interact is NOT needed; the overlay connects to Twitch automatically.
-    5) Background is transparent. Position & crop like any other source.
+    GitHub Pages usage:
+      • Host this file as index.html in your repo (e.g., BarryTwitch).
+      • Place tmi.min.js alongside it (repo root).
+      • Optional assets folder: /assets (textures & icons).
 
-    OPTIONAL URL PARAMS (append when using as a URL source or after the file name in OBS):
-      ?channel=barry_risk&max=12&fade=25&font=22&badge=1&hidecmd=1&shadow=1
+    Example URL for OBS / browser:
+      https://<username>.github.io/BarryTwitch/?channel=barry_risk&theme=risk&showheader=1&compact=1&mention=1&max=14&fade=18&font=22&hidecmd=1&shadow=1&v=6
 
-      channel  – Twitch channel to read (default: barry_risk)
-      max      – max messages on screen (default: 10)
-      fade     – seconds before a message fades out (0 = never) (default: 20)
-      font     – base font size in px (default: 20)
-      badge    – show badges (0/1) (default: 1)
-      hidecmd  – hide messages starting with '!' (0/1) (default: 1)
-      shadow   – heavier text glow (0/1) (default: 1)
-
-    NOTE: This overlay uses tmi.js (Twitch IRC). It supports native Twitch emotes.
+    URL Params:
+      channel    – Twitch channel to read (default: barry_risk)
+      max        – max messages on screen (default: 10)
+      fade       – seconds before a message fades out (0 = never) (default: 20)
+      font       – base font size in px (default: 20)
+      badge      – show badges (0/1) (default: 1)
+      hidecmd    – hide messages starting with '!' (0/1) (default: 1)
+      shadow     – heavier text glow (0/1) (default: 1)
+      theme      – neon | minimal | risk (default: neon)
+      showheader – 1/0 show the header bar (default: 0)
+      compact    – 1/0 tighter spacing (default: 0)
+      mention    – 1/0 highlight messages mentioning you (default: 0)
+      v          – cache buster (increment when you update files)
   -->
   <style>
     :root {
@@ -31,11 +33,9 @@
       --panel: rgba(10, 14, 23, 0.35);
       --text: #e9f2ff;
       --name: #a9d4ff;
-      --accent: #6ec3ff; /* neon-ish cyan */
+      --accent: #6ec3ff;
       --accent-2: #ffffff;
       --highlight: rgba(110, 195, 255, 0.18);
-      --danger: #ff5f5f;
-      --muted: #8aa0b8;
       --radius: 18px;
     }
 
@@ -58,6 +58,24 @@
       gap: 8px;
     }
 
+    .header { display:none; }
+    .show-header .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      margin: 8px 10px 2px 10px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border-left: 3px solid var(--accent);
+      color: var(--text);
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      backdrop-filter: blur(6px) saturate(130%);
+      -webkit-backdrop-filter: blur(6px) saturate(130%);
+    }
+    .header .logo-img { height: 32px; filter: drop-shadow(0 0 4px rgba(0,0,0,.7)); }
+
     .msg {
       position: relative;
       display: flex;
@@ -71,6 +89,8 @@
       backdrop-filter: blur(6px) saturate(130%);
       -webkit-backdrop-filter: blur(6px) saturate(130%);
       animation: pop 180ms ease-out;
+      background-image: url('assets/paper_texture.png');
+      background-size: cover;
     }
 
     .msg.highlight {
@@ -80,232 +100,204 @@
       box-shadow: 0 0 28px rgba(110,195,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.04);
     }
 
-    .avatar {
-      width: 0; /* Hidden by default (we don't fetch avatars here). Keep slot for future.) */
-      height: 0;
-      border-radius: 50%;
-      flex: 0 0 auto;
-      display: none;
-    }
+    .compact .msg { padding: 8px 10px; gap: 8px; }
 
-    .bubble {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
+    .bubble { flex: 1 1 auto; min-width: 0; }
 
     .name {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--name);
       line-height: 1.2;
       margin-bottom: 2px;
       filter: drop-shadow(0 0 4px rgba(110,195,255,0.35));
     }
 
-    .badges {
-      display: inline-flex;
-      gap: 4px;
-      vertical-align: middle;
-    }
+    .badges { display: inline-flex; gap: 6px; vertical-align: middle; }
+    .badge { width: 18px; height: 18px; border-radius: 4px; display: inline-block; }
 
-    .badge {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      background: rgba(255,255,255,0.15);
-      display: inline-block;
-    }
+    /* Risk icons for roles */
+    .badge.broadcaster { background: url('assets/globe.png') center/contain no-repeat; }
+    .badge.mod         { background: url('assets/shield.png') center/contain no-repeat; }
+    .badge.vip         { background: url('assets/crown.png') center/contain no-repeat; }
+    .badge.sub         { background: url('assets/star.png') center/contain no-repeat; }
 
-    .text {
-      color: var(--text);
-      line-height: 1.35;
-      word-wrap: break-word;
-      overflow-wrap: anywhere;
-    }
+    .text { color: var(--text); line-height: 1.35; word-wrap: break-word; overflow-wrap: anywhere; }
+    .shadow .name, .shadow .text { text-shadow: 0 0 2px rgba(0,0,0,0.35), 0 0 12px rgba(110,195,255,0.15); }
 
-    .shadow .name, .shadow .text {
-      text-shadow: 0 0 2px rgba(0,0,0,0.35), 0 0 12px rgba(110,195,255,0.15);
-    }
-
-    .emote {
-      height: 1.25em;
-      vertical-align: -0.2em;
-    }
-
+    .emote { height: 1.25em; vertical-align: -0.2em; }
     .fadeout { opacity: 0; transition: opacity 800ms ease-out; }
 
-    @keyframes pop {
-      from { transform: translateY(6px) scale(0.98); opacity: 0; }
-      to   { transform: translateY(0) scale(1); opacity: 1; }
+    .msg.mention { background: rgba(233, 74, 54, 0.25); border-color: var(--accent-2); box-shadow: 0 0 18px rgba(255,209,102,0.35); animation: alertPulse 1s ease-in-out 2; }
+
+    @keyframes pop { from { transform: translateY(6px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes alertPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+    /* THEMES */
+    body.theme-neon { --panel: rgba(10, 14, 23, 0.35); --accent: #6ec3ff; --accent-2: #ffffff; --highlight: rgba(110,195,255,0.18); --name: #a9d4ff; }
+    body.theme-minimal { --panel: rgba(255,255,255,0.10); --accent: #ffffff; --accent-2: #ffffff; --highlight: rgba(255,255,255,0.08); --name: #ffffff; }
+    body.theme-risk { --panel: rgba(20, 9, 9, 0.45); --accent: #e94a36; --accent-2: #ffd166; --text: #f2e6d9; --name: #ffd166; background:
+      url('assets/map_texture.jpg') center/cover no-repeat,
+      radial-gradient(circle at 20% 0%, rgba(233,74,54,0.18), transparent 60%),
+      radial-gradient(circle at 85% 100%, rgba(255,209,102,0.12), transparent 60%);
     }
+
+    /* Message marker flag */
+    .msg::before { content:""; width:20px; height:20px; margin-top:2px; background:url('assets/flag_icon.png') center/contain no-repeat; flex:0 0 auto; }
   </style>
 </head>
 <body>
-  <div id="app" class="wrap shadow"></div>
+  <div id="root">
+    <div id="hdr" class="header">
+      <img src="assets/risk_style_logo.png" alt="Barry Risk Logo" class="logo-img">
+      <div class="title">War Room — Live Chat</div>
+    </div>
+    <div id="app" class="wrap shadow"></div>
+  </div>
 
+  <!-- Load tmi locally -->
   <script src="tmi.min.js"></script>
   <script>
-    // ---------- Helpers ----------
+    // On-screen banner for fatal errors
+    function banner(msg) {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0e17;color:#e9f2ff;font:16px system-ui;z-index:9999;text-align:center;padding:24px';
+      d.innerHTML = msg; document.body.appendChild(d); return d;
+    }
+
+    // Parse URL params
     function getParams() {
       const url = new URL(window.location.href);
       const p = Object.fromEntries(url.searchParams.entries());
       return {
         channel: (p.channel || 'barry_risk').replace(/^#/, ''),
         max: Math.max(1, parseInt(p.max || '10', 10)),
-        fade: Math.max(0, parseInt(p.fade || '20', 10)), // seconds; 0 = never
+        fade: Math.max(0, parseInt(p.fade || '20', 10)), // 0 = never
         font: Math.max(10, parseInt(p.font || '20', 10)),
         badge: p.badge === undefined ? 1 : Number(p.badge),
         hidecmd: p.hidecmd === undefined ? 1 : Number(p.hidecmd),
         shadow: p.shadow === undefined ? 1 : Number(p.shadow),
+        theme: (p.theme || 'risk').toLowerCase(), // default to risk theme
+        showheader: p.showheader === '1' || p.showheader === 'true',
+        compact: p.compact === '1' || p.compact === 'true',
+        mention: p.mention === '1' || p.mention === 'true',
       };
     }
 
-    const CFG = getParams();
-    document.documentElement.style.fontSize = CFG.font + 'px';
-    if (!CFG.shadow) document.getElementById('app').classList.remove('shadow');
+    // Wait for tmi to be present, up to ~3s
+    (function boot() {
+      const started = Date.now();
+      (function waitForTmi() {
+        if (window.tmi && typeof window.tmi.Client === 'function') {
+          startOverlay();
+        } else if (Date.now() - started < 3000) {
+          setTimeout(waitForTmi, 100);
+        } else {
+          banner('Error: <b>tmi.min.js</b> failed to load. Disable ad-block, confirm the file exists in repo root, and ensure &lt;script src="tmi.min.js"&gt; is above this script.');
+          console.error('tmi failed to load; window.tmi =', window.tmi);
+        }
+      })();
+    })();
 
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-    }
+    function startOverlay() {
+      const CFG = getParams();
+      document.documentElement.style.fontSize = CFG.font + 'px';
+      const app = document.getElementById('app');
+      if (!CFG.shadow) app.classList.remove('shadow');
+      document.body.classList.add(`theme-${CFG.theme}`);
+      if (CFG.showheader) document.body.classList.add('show-header');
+      if (CFG.compact) document.body.classList.add('compact');
 
-    function nameColorFromTag(color, name) {
-      if (color) return color; // Twitch user-selected color
-      // deterministic pastel from name
-      let h = 0; for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) >>> 0;
-      const hue = h % 360; return `hsl(${hue} 70% 75%)`;
-    }
-
-    function buildEmoteMap(emotes) {
-      // emotes: { emoteID: ["start-end", ...], ... }
-      const parts = [];
-      if (!emotes) return parts;
-      Object.keys(emotes).forEach(id => {
-        emotes[id].forEach(range => {
-          const [s, e] = range.split('-').map(n => parseInt(n,10));
-          parts.push({ id, start: s, end: e });
+      function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+      }
+      function nameColorFromTag(color, name) {
+        if (color) return color;
+        let h = 0; for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) >>> 0;
+        const hue = h % 360; return `hsl(${hue} 70% 75%)`;
+      }
+      function buildEmoteMap(emotes) {
+        const parts = []; if (!emotes) return parts;
+        Object.keys(emotes).forEach(id => {
+          emotes[id].forEach(range => { const [s, e] = range.split('-').map(n => parseInt(n,10)); parts.push({ id, start: s, end: e }); });
         });
-      });
-      return parts.sort((a,b) => a.start - b.start);
-    }
-
-    function renderMessageWithEmotes(text, emotes) {
-      if (!emotes || Object.keys(emotes).length === 0) return escapeHtml(text);
-      const ranges = buildEmoteMap(emotes);
-      let out = '';
-      let lastIndex = 0;
-      for (const r of ranges) {
-        // plaintext segment before emote
-        if (lastIndex < r.start) out += escapeHtml(text.slice(lastIndex, r.start));
-        const emoteText = text.slice(r.start, r.end + 1);
-        const url = `https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/1.0`;
-        out += `<img class="emote" alt="${escapeHtml(emoteText)}" src="${url}">`;
-        lastIndex = r.end + 1;
+        return parts.sort((a,b) => a.start - b.start);
       }
-      // remaining text
-      if (lastIndex < text.length) out += escapeHtml(text.slice(lastIndex));
-      return out;
-    }
+      function renderMessageWithEmotes(text, emotes) {
+        if (!emotes || Object.keys(emotes).length === 0) return escapeHtml(text);
+        const ranges = buildEmoteMap(emotes); let out = ''; let lastIndex = 0;
+        for (const r of ranges) {
+          if (lastIndex < r.start) out += escapeHtml(text.slice(lastIndex, r.start));
+          const emoteText = text.slice(r.start, r.end + 1);
+          const url = `https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/1.0`;
+          out += `<img class="emote" alt="${escapeHtml(emoteText)}" src="${url}">`;
+          lastIndex = r.end + 1;
+        }
+        if (lastIndex < text.length) out += escapeHtml(text.slice(lastIndex));
+        return out;
+      }
+      function shouldHideMessage(message) { return CFG.hidecmd ? message.trim().startsWith('!') : false; }
 
-    function shouldHideMessage(message) {
-      if (!CFG.hidecmd) return false;
-      return message.trim().startsWith('!');
-    }
+      function addMessage({ displayName, color, isMod, isBroadcaster, isVip, isSub, textHTML, highlighted, rawMessage }) {
+        const nameColor = nameColorFromTag(color, displayName);
+        const isMention = CFG.mention && /barry_?risk/i.test(rawMessage || '');
 
-    // ---------- DOM & lifecycle ----------
-    const app = document.getElementById('app');
+        const el = document.createElement('div');
+        el.className = 'msg' + (highlighted ? ' highlight' : '') + (isMention ? ' mention' : '');
+        el.innerHTML = `
+          <div class="bubble">
+            <div class="name" style="color:${nameColor}">
+              <span>${escapeHtml(displayName)}</span>
+              <span class="badges">
+                ${CFG.badge && isBroadcaster ? '<span class="badge broadcaster" title="Broadcaster"></span>' : ''}
+                ${CFG.badge && isMod ? '<span class="badge mod" title="Mod"></span>' : ''}
+                ${CFG.badge && isVip ? '<span class="badge vip" title="VIP"></span>' : ''}
+                ${CFG.badge && isSub ? '<span class="badge sub" title="Subscriber"></span>' : ''}
+              </span>
+            </div>
+            <div class="text">${textHTML}</div>
+          </div>`;
 
-    function addMessage({ displayName, color, isMod, isBroadcaster, isVip, isSub, textHTML, highlighted }) {
-      const nameColor = nameColorFromTag(color, displayName);
-
-      const el = document.createElement('div');
-      el.className = 'msg' + (highlighted ? ' highlight' : '');
-      el.innerHTML = `
-        <div class="bubble">
-          <div class="name" style="color:${nameColor}">
-            <span>${escapeHtml(displayName)}</span>
-            <span class="badges">
-              ${isBroadcaster ? '<span class="badge" title="Broadcaster"></span>' : ''}
-              ${isMod ? '<span class="badge" title="Mod" style="background:#43d17d"></span>' : ''}
-              ${isVip ? '<span class="badge" title="VIP" style="background:#ff7de9"></span>' : ''}
-              ${isSub ? '<span class="badge" title="Sub" style="background:#ffd166"></span>' : ''}
-            </span>
-          </div>
-          <div class="text">${textHTML}</div>
-        </div>`;
-
-      app.appendChild(el);
-
-      // Trim to max
-      while (app.children.length > CFG.max) {
-        app.removeChild(app.firstChild);
+        app.appendChild(el);
+        while (app.children.length > CFG.max) app.removeChild(app.firstChild);
+        if (CFG.fade > 0) {
+          setTimeout(() => { el.classList.add('fadeout'); }, CFG.fade * 1000);
+          setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, (CFG.fade * 1000) + 900);
+        }
       }
 
-      // Auto fade
-      if (CFG.fade > 0) {
-        setTimeout(() => { el.classList.add('fadeout'); }, CFG.fade * 1000);
-        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, (CFG.fade * 1000) + 900);
-      }
+      // Connect to Twitch IRC via tmi.js
+      const client = new tmi.Client({ connection: { secure: true, reconnect: true }, channels: [CFG.channel] });
+
+      client.on('message', (channel, tags, message, self) => {
+        if (self) return; if (shouldHideMessage(message)) return;
+        try {
+          const displayName = tags['display-name'] || tags.username || 'unknown';
+          const color = tags['color'] || null;
+          const isMod = tags.mod === true || tags.mod === '1';
+          const isBroadcaster = tags.badges && (tags.badges.broadcaster === '1');
+          const isVip = tags.badges && (tags.badges.vip === '1');
+          const isSub = tags.subscriber === true || tags.subscriber === '1' || (tags.badges && (tags.badges.subscriber));
+          const highlighted = tags['msg-id'] === 'highlighted-message';
+          const textHTML = renderMessageWithEmotes(message, tags.emotes);
+          addMessage({ displayName, color, isMod, isBroadcaster, isVip, isSub, textHTML, highlighted, rawMessage: message });
+        } catch (err) { console.error('Render error', err); }
+      });
+
+      client.on('connected', () => {
+        addMessage({ displayName: 'Chat Connected', color: '#6ec3ff', isMod: false, isBroadcaster: false, isVip: false, isSub: false, textHTML: `Now listening to <b>#${escapeHtml(CFG.channel)}</b>.`, highlighted: false, rawMessage: '' });
+      });
+      client.on('disconnected', () => {
+        addMessage({ displayName: 'Chat Disconnected', color: '#ff7d7d', isMod: false, isBroadcaster: false, isVip: false, isSub: false, textHTML: 'Attempting to reconnect…', highlighted: false, rawMessage: '' });
+      });
+
+      client.connect().catch(err => {
+        console.error('tmi connection failed', err);
+        addMessage({ displayName: 'Error', color: '#ff7d7d', isMod: false, isBroadcaster: false, isVip: false, isSub: false, textHTML: 'Could not connect to Twitch chat. Is the channel name correct?', highlighted: true, rawMessage: '' });
+      });
     }
-
-    // ---------- Connect to Twitch IRC via tmi.js ----------
-    const client = new tmi.Client({
-      connection: { secure: true, reconnect: true },
-      channels: [CFG.channel]
-    });
-
-    client.on('message', (channel, tags, message, self) => {
-      if (self) return; // ignore our own
-      if (shouldHideMessage(message)) return;
-
-      try {
-        const displayName = tags['display-name'] || tags.username || 'unknown';
-        const color = tags['color'] || null;
-        const isMod = tags.mod === true || tags.mod === '1';
-        const isBroadcaster = tags.badges && (tags.badges.broadcaster === '1');
-        const isVip = tags.badges && (tags.badges.vip === '1');
-        const isSub = tags.subscriber === true || tags.subscriber === '1' || (tags.badges && (tags.badges.subscriber));
-        const highlighted = tags['msg-id'] === 'highlighted-message';
-
-        const textHTML = renderMessageWithEmotes(message, tags.emotes);
-        addMessage({ displayName, color, isMod, isBroadcaster, isVip, isSub, textHTML, highlighted });
-      } catch (err) {
-        console.error('Render error', err);
-      }
-    });
-
-    client.on('connected', () => {
-      // Optional: initial system line
-      addMessage({
-        displayName: 'Chat Connected',
-        color: '#6ec3ff',
-        isMod: false, isBroadcaster: false, isVip: false, isSub: false,
-        textHTML: `Now listening to <b>#${escapeHtml(CFG.channel)}</b>.`,
-        highlighted: false,
-      });
-    });
-
-    client.on('disconnected', () => {
-      addMessage({
-        displayName: 'Chat Disconnected',
-        color: '#ff7d7d',
-        isMod: false, isBroadcaster: false, isVip: false, isSub: false,
-        textHTML: 'Attempting to reconnect…',
-        highlighted: false,
-      });
-    });
-
-    client.connect().catch(err => {
-      console.error('tmi connection failed', err);
-      addMessage({
-        displayName: 'Error',
-        color: '#ff7d7d',
-        isMod: false, isBroadcaster: false, isVip: false, isSub: false,
-        textHTML: 'Could not connect to Twitch chat. Is the channel name correct?',
-        highlighted: true,
-      });
-    });
   </script>
 </body>
 </html>
